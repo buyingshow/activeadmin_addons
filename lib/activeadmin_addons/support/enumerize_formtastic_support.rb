@@ -3,20 +3,22 @@ module ActiveAdminAddons
     extend ActiveSupport::Concern
 
     included do
-      alias_method_chain :input, :ransack
-    end
+      prepend(
+        Module.new do
+          def input(method, options = {})
+            if object.is_a?(::Ransack::Search)
+              klass = object.klass
 
-    def input_with_ransack(method, options = {})
-      if object.is_a?(::Ransack::Search)
-        klass = object.klass
+              if klass.respond_to?(:enumerized_attributes) && (attr = klass.enumerized_attributes[method])
+                options[:collection] ||= attr.options
+                options[:as] = :select
+              end
+            end
 
-        if klass.respond_to?(:enumerized_attributes) && (attr = klass.enumerized_attributes[method])
-          options[:collection] ||= attr.options
-          options[:as] = :select
+            super(method, options)
+          end
         end
-      end
-
-      input_without_ransack(method, options)
+      )
     end
   end
 end
